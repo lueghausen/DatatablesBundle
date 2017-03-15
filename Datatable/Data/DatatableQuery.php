@@ -351,7 +351,9 @@ class DatatableQuery
         $this->setLeftJoins($this->qb);
         $this->setWhere($this->qb);
         $this->setWhereAllCallback($this->qb);
+        $this->setGroupByCallback($this->qb);
         $this->setOrderBy();
+        $this->setSelectCallback($this->qb);
         $this->setLimit();
 
         return $this;
@@ -386,6 +388,18 @@ class DatatableQuery
     //-------------------------------------------------
 
     /**
+     * Set the line formatter function.
+     *
+     * @return $this
+     */
+    private function setLineFormatter()
+    {
+        $this->lineFormatter = $this->datatableView->getLineFormatter();
+
+        return $this;
+    }
+
+    /**
      * Add the where-all function.
      *
      * @param $callback
@@ -405,13 +419,38 @@ class DatatableQuery
     }
 
     /**
-     * Set the line formatter function.
+     * Set where all callback.
+     *
+     * @param QueryBuilder $qb
      *
      * @return $this
      */
-    private function setLineFormatter()
+    private function setWhereAllCallback(QueryBuilder $qb)
     {
-        $this->lineFormatter = $this->datatableView->getLineFormatter();
+        if (!empty($this->callbacks['WhereAll'])) {
+            foreach ($this->callbacks['WhereAll'] as $callback) {
+                $callback($qb);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add the where-all function.
+     *
+     * @param $callback
+     *
+     * @return $this
+     * @throws Exception
+     */
+    public function addSelectCallback($callback)
+    {
+        if (!is_callable($callback)) {
+            throw new Exception(sprintf("Callable expected and %s given", gettype($callback)));
+        }
+
+        $this->callbacks['Select'][] = $callback;
 
         return $this;
     }
@@ -423,10 +462,47 @@ class DatatableQuery
      *
      * @return $this
      */
-    private function setWhereAllCallback(QueryBuilder $qb)
+    private function setSelectCallback(QueryBuilder $qb)
     {
-        if (!empty($this->callbacks['WhereAll'])) {
-            foreach ($this->callbacks['WhereAll'] as $callback) {
+        if (!empty($this->callbacks['Select'])) {
+            foreach ($this->callbacks['Select'] as $callback) {
+                $callback($qb);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * Add the where-all function.
+     *
+     * @param $callback
+     *
+     * @return $this
+     * @throws Exception
+     */
+    public function addGroupByCallback($callback)
+    {
+        if (!is_callable($callback)) {
+            throw new Exception(sprintf("Callable expected and %s given", gettype($callback)));
+        }
+
+        $this->callbacks['GroupBy'][] = $callback;
+
+        return $this;
+    }
+
+    /**
+     * Set where all callback.
+     *
+     * @param QueryBuilder $qb
+     *
+     * @return $this
+     */
+    private function setGroupByCallback(QueryBuilder $qb)
+    {
+        if (!empty($this->callbacks['GroupBy'])) {
+            foreach ($this->callbacks['GroupBy'] as $callback) {
                 $callback($qb);
             }
         }
@@ -765,7 +841,9 @@ class DatatableQuery
         $this->setSelectFrom();
         $this->setLeftJoins($this->qb);
         $this->setWhereAllCallback($this->qb);
+        $this->setGroupByCallback($this->qb);
         $this->setOrderBy();
+        $this->setSelectCallback($this->qb);
 
         return $this->execute()->getArrayResult();
     }
